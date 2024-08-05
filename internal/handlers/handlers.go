@@ -9,11 +9,11 @@ import (
 	"strconv"
 
 	"students-crud/internal/models"
-	"students-crud/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
 
+//go:generate mockgen -source=handlers.go -destination=mock/mock.go
 type Storage interface {
 	Create(ctx context.Context, student *models.Student) (int, error)
 	Read(ctx context.Context, id int) (*models.Student, error)
@@ -22,11 +22,11 @@ type Storage interface {
 }
 
 type Handlers struct {
-	storage *storage.Storage
+	storage Storage // Изменено на интерфейс
 }
 
 // NewHandlers создает новый экземпляр Handlers
-func NewHandlers(storage *storage.Storage) *Handlers {
+func NewHandlers(storage Storage) *Handlers { // Изменено на интерфейс
 	return &Handlers{storage: storage}
 }
 
