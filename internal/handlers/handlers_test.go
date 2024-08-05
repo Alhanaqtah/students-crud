@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 
 	"students-crud/internal/handlers"
 	mock_handlers "students-crud/internal/handlers/mock"
@@ -77,5 +78,80 @@ func TestHandlers_CreateStudent(t *testing.T) {
 			assert.Equal(t, testCase.expectedRequestBody, rec.Body.String())
 		})
 
+	}
+}
+
+func TestHandlers_ReadStudent(t *testing.T) {
+	type mockBehavior func(s *mock_handlers.MockStorage, id int)
+
+	testCases := []struct {
+		name                string
+		inputID             int
+		mockBehaviour       mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
+	}{
+		{
+			name:    "OK",
+			inputID: 1,
+			mockBehaviour: func(s *mock_handlers.MockStorage, id int) {
+				s.EXPECT().Read(gomock.Any(), id).Return(&models.Student{
+					ID:    id,
+					Name:  "Student #1",
+					Email: "#1@mail.com",
+				}, nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"id":1,"name":"Student #1","email":"#1@mail.com"}`,
+		},
+		{
+			name:    "Not Found",
+			inputID: 2,
+			mockBehaviour: func(s *mock_handlers.MockStorage, id int) {
+				s.EXPECT().Read(gomock.Any(), id).Return(nil, errors.New("student not found")) // Возвращаем ошибку
+			},
+			expectedStatusCode:  404,
+			expectedRequestBody: `{"error":"student not found"}`,
+		},
+		{
+			name:    "Invalid ID",
+			inputID: -1, // Неверный ID для проверки
+			mockBehaviour: func(s *mock_handlers.MockStorage, id int) {
+				// Никаких вызовов не требуется для Invalid ID
+			},
+			expectedStatusCode:  400,
+			expectedRequestBody: `{"error":"invalid id"}`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			storage := mock_handlers.NewMockStorage(c)
+			if testCase.name != "Invalid ID" {
+				testCase.mockBehaviour(storage, testCase.inputID)
+			}
+
+			handlers := handlers.NewHandlers(storage)
+
+			r := gin.Default()
+			r.GET("/students/:id", handlers.ReadStudent)
+
+			var req *http.Request
+			if testCase.name == "Invalid ID" {
+				req, _ = http.NewRequest(http.MethodGet, "/students/-1", nil) // Для проверки неверного ID
+			} else {
+				req, _ = http.NewRequest(http.MethodGet, "/students/"+strconv.Itoa(testCase.inputID), nil)
+			}
+
+			rec := httptest.NewRecorder()
+
+			r.ServeHTTP(rec, req)
+
+			assert.Equal(t, testCase.expectedStatusCode, rec.Code)
+			assert.Equal(t, testCase.expectedRequestBody, rec.Body.String())
+		})
 	}
 }
