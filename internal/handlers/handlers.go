@@ -81,7 +81,7 @@ func (h *Handlers) ReadStudent(ctx *gin.Context) {
 func (h *Handlers) UpdateStudent(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id <= 0 {
 		log.Println("invalid id:", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
@@ -118,7 +118,7 @@ func (h *Handlers) UpdateStudent(ctx *gin.Context) {
 func (h *Handlers) DeleteStudent(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id <= 0 { // Добавлено условие проверки на id <= 0
 		log.Println("invalid id:", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
